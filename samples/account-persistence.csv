@@ -1,0 +1,6 @@
+Event ID,Level,Date and Time,Source,Task Category,User,Computer,Message
+4624,Information,2024-06-12 22:00:00,Microsoft-Windows-Security-Auditing,,sysadmin,SERVER-01,"An account was successfully logged on."
+4720,Information,2024-06-12 22:01:00,Microsoft-Windows-Security-Auditing,,temp-backdoor,SERVER-01,"A user account was created. Subject Account: sysadmin New Account Name: temp-backdoor"
+4732,Information,2024-06-12 22:02:00,Microsoft-Windows-Security-Auditing,,temp-backdoor,SERVER-01,"A member was added to a security-enabled local group. Group Name: Administrators Member Account Name: temp-backdoor"
+4624,Information,2024-06-12 22:03:00,Microsoft-Windows-Security-Auditing,,temp-backdoor,SERVER-01,"An account was successfully logged on. Logon Type: 3"
+4688,Information,2024-06-12 22:04:00,Microsoft-Windows-Security-Auditing,,temp-backdoor,SERVER-01,"A new process has been created. Process Name: powershell.exe Parent: cmd.exe"

@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Network Traffic Triage Tool — SOC Triage Toolkit</title>
+  <meta name="description" content="Analyse Wireshark CSV exports locally in your browser. Detect high-volume hosts, scanning patterns, and unusual traffic. No data is uploaded.">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="site-header" role="banner">
+  <div class="inner">
+    <a href="index.html" class="logo" aria-label="SOC Triage Toolkit home">
+      <span class="icon" aria-hidden="true">🛡️</span>
+      SOC Triage Toolkit
+    </a>
+    <nav aria-label="Main navigation">
+      <a href="index.html">Home</a>
+      <a href="network.html" class="active" aria-current="page">Network</a>
+      <a href="windows.html">Windows</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="page-wrapper">
+
+    <section class="page-hero" aria-labelledby="tool-heading">
+      <span class="badge">📡 Network Traffic Triage Tool</span>
+      <h1 id="tool-heading">Network Traffic Triage</h1>
+      <p>Upload a Wireshark CSV packet export to identify unusual traffic patterns, high-volume sources, and behaviour worth investigating. All analysis happens locally in your browser.</p>
+    </section>
+
+    <div class="privacy-box" role="note" aria-label="Privacy statement">
+      <span aria-hidden="true">🔒</span>
+      <p>Your packet capture data is analysed locally in your browser and is <strong>not uploaded anywhere</strong>. No data leaves your device.</p>
+    </div>
+
+    <div class="disclaimer-box" role="note" aria-label="Disclaimer">
+      <p><strong>Educational tool.</strong> Alerts indicate activity worth investigating and do not prove malicious behaviour. Only analyse traffic from networks and systems you own or are authorised to monitor.</p>
+    </div>
+
+    <!-- Upload area -->
+    <div class="card" id="upload-card">
+      <div class="card-header">
+        <h2>Upload Wireshark CSV</h2>
+      </div>
+
+      <div class="upload-zone" id="upload-zone" role="button" tabindex="0" aria-label="Upload Wireshark CSV file. Click or drag and drop.">
+        <span class="upload-icon" aria-hidden="true">📁</span>
+        <h3>Drag &amp; drop your Wireshark CSV here</h3>
+        <p>or click to browse &mdash; Wireshark &rarr; File &rarr; Export Packet Dissections &rarr; As CSV</p>
+        <button class="btn btn-primary" type="button" onclick="document.getElementById('file-input').click()" aria-label="Choose CSV file">
+          Choose CSV File
+        </button>
+        <input type="file" id="file-input" accept=".csv,text/csv" aria-label="CSV file input">
+      </div>
+
+      <div class="file-info" id="file-info" role="status" aria-live="polite"></div>
+      <div class="error-box hidden" id="parse-error" role="alert"><p id="parse-error-text"></p></div>
+
+      <!-- Sample data buttons -->
+      <div class="card" style="margin-bottom: 0; background: var(--bg-surface);">
+        <h3 style="margin-bottom: 0.75rem;">Or load a sample dataset</h3>
+        <div class="btn-group">
+          <button class="btn btn-secondary" onclick="loadSample('normal-traffic')" type="button">🟢 Load Normal Traffic</button>
+          <button class="btn btn-secondary" onclick="loadSample('high-volume-traffic')" type="button">🟡 Load High-Volume Traffic</button>
+          <button class="btn btn-secondary" onclick="loadSample('mixed-soc-lab')" type="button">🔴 Load Mixed SOC Lab</button>
+        </div>
+        <p style="margin-top: 0.75rem; font-size: 0.82rem;">Sample datasets contain fictional IP addresses and are safe to use for learning and demonstration.</p>
+      </div>
+    </div>
+
+    <!-- Demo banner -->
+    <div class="demo-banner" id="demo-banner" role="status">
+      <span aria-hidden="true">⚠️</span>
+      DEMO DATA — This is a pre-built sample dataset for learning and demonstration purposes.
+    </div>
+
+    <!-- Results section (hidden until data is loaded) -->
+    <div id="results" class="hidden" aria-live="polite">
+
+      <!-- Section tabs -->
+      <div class="section-tabs" role="tablist" aria-label="Analysis sections">
+        <button class="section-tab active" role="tab" aria-selected="true"  aria-controls="tab-overview"  onclick="showTab('overview', this)">Overview</button>
+        <button class="section-tab"         role="tab" aria-selected="false" aria-controls="tab-findings"  onclick="showTab('findings', this)">Findings &amp; Alerts</button>
+        <button class="section-tab"         role="tab" aria-selected="false" aria-controls="tab-hosts"     onclick="showTab('hosts', this)">Top Hosts</button>
+        <button class="section-tab"         role="tab" aria-selected="false" aria-controls="tab-settings"  onclick="showTab('settings', this)">Thresholds</button>
+        <button class="section-tab"         role="tab" aria-selected="false" aria-controls="tab-learn"     onclick="showTab('learn', this)">How to Analyse</button>
+      </div>
+
+      <!-- OVERVIEW TAB -->
+      <div class="tool-section active" id="tab-overview" role="tabpanel">
+
+        <!-- Investigation score -->
+        <div class="score-box" id="score-box" aria-label="Investigation score">
+          <div>
+            <div class="score-number" id="score-value">0</div>
+            <div class="score-label" id="score-label">Calculating…</div>
+          </div>
+          <div class="score-breakdown">
+            <h4 style="margin-bottom: 0.5rem;">Investigation Score Breakdown</h4>
+            <table id="score-table" aria-label="Score components"><tbody></tbody></table>
+            <p style="font-size: 0.78rem; margin-top: 0.5rem;">This score represents investigative priority, not the probability of an attack. Higher scores suggest more patterns worth examining.</p>
+          </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="stat-grid" id="stat-grid" aria-label="Traffic summary statistics"></div>
+
+        <!-- Protocol distribution -->
+        <div class="card">
+          <div class="card-header"><h2>Protocol Distribution</h2></div>
+          <div class="bar-list" id="protocol-bars" aria-label="Protocol distribution chart"></div>
+        </div>
+
+        <!-- Most active sources -->
+        <div class="card">
+          <div class="card-header"><h2>Top Source Hosts</h2></div>
+          <div class="bar-list" id="source-bars" aria-label="Top source hosts chart"></div>
+        </div>
+
+        <!-- Top destinations -->
+        <div class="card">
+          <div class="card-header"><h2>Top Destination Addresses</h2></div>
+          <div class="bar-list" id="dest-bars" aria-label="Top destination addresses chart"></div>
+        </div>
+
+      </div>
+
+      <!-- FINDINGS TAB -->
+      <div class="tool-section" id="tab-findings" role="tabpanel">
+
+        <div class="filter-row" role="search" aria-label="Filter alerts">
+          <div class="form-group">
+            <label class="form-label" for="filter-src">Source IP</label>
+            <input type="search" id="filter-src" placeholder="e.g. 192.168.1.10" aria-label="Filter by source IP">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="filter-dst">Destination IP</label>
+            <input type="search" id="filter-dst" placeholder="e.g. 10.0.0.1" aria-label="Filter by destination IP">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="filter-proto">Protocol</label>
+            <select id="filter-proto" aria-label="Filter by protocol"><option value="">All Protocols</option></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="filter-sev">Severity</label>
+            <select id="filter-sev" aria-label="Filter by severity">
+              <option value="">All Severities</option>
+              <option value="informational">Informational</option>
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </select>
+          </div>
+          <div class="form-group" style="flex: 0;">
+            <label class="form-label">&nbsp;</label>
+            <button class="btn btn-ghost" onclick="clearNetworkFilters()" type="button">Clear Filters</button>
+          </div>
+        </div>
+
+        <div id="alert-count" style="font-size:0.85rem; color:var(--text-muted); margin-bottom:0.75rem;"></div>
+        <div class="alert-list" id="alert-list" aria-label="Security findings"></div>
+        <div class="no-results hidden" id="no-findings">
+          <div class="nr-icon" aria-hidden="true">✅</div>
+          <p>No findings match the current filters.</p>
+        </div>
+      </div>
+
+      <!-- TOP HOSTS TAB -->
+      <div class="tool-section" id="tab-hosts" role="tabpanel">
+        <div class="card">
+          <div class="card-header"><h2>Top 10 Source Hosts</h2></div>
+          <div class="data-table-wrap">
+            <table class="data-table" id="host-table" aria-label="Top source hosts by packet count">
+              <thead><tr><th scope="col">#</th><th scope="col">Source IP</th><th scope="col">Packets</th><th scope="col">Unique Destinations</th><th scope="col">Protocols</th><th scope="col">Avg Length</th></tr></thead>
+              <tbody id="host-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h2>Top 10 Destination Addresses</h2></div>
+          <div class="data-table-wrap">
+            <table class="data-table" id="dest-table" aria-label="Top destination addresses by packet count">
+              <thead><tr><th scope="col">#</th><th scope="col">Destination IP</th><th scope="col">Packets Received</th><th scope="col">Unique Sources</th></tr></thead>
+              <tbody id="dest-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- THRESHOLDS TAB -->
+      <div class="tool-section" id="tab-settings" role="tabpanel">
+        <div class="card">
+          <div class="card-header"><h2>Detection Thresholds</h2></div>
+          <div class="warning-box"><p>These are educational defaults, not universal security thresholds. A busy server may legitimately generate thousands of packets, while the same activity from a workstation might deserve investigation. Adjust thresholds to match your environment.</p></div>
+          <div class="threshold-grid">
+            <div class="form-group">
+              <label class="form-label" for="thr-packets">High packet volume (packets from one source)</label>
+              <input type="number" id="thr-packets" value="50" min="1" aria-label="High packet volume threshold">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="thr-dests">Possible scanning (unique destinations from one source)</label>
+              <input type="number" id="thr-dests" value="10" min="1" aria-label="Unique destinations threshold">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="thr-ports">Possible port scanning (unique ports to one destination)</label>
+              <input type="number" id="thr-ports" value="10" min="1" aria-label="Unique ports threshold">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="thr-icmp">High ICMP activity (ICMP packets from one source)</label>
+              <input type="number" id="thr-icmp" value="30" min="1" aria-label="High ICMP threshold">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="thr-dns">High DNS activity (DNS packets from one source)</label>
+              <input type="number" id="thr-dns" value="30" min="1" aria-label="High DNS threshold">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="thr-repeat">Repeated communication (packets, same source &rarr; destination)</label>
+              <input type="number" id="thr-repeat" value="40" min="1" aria-label="Repeated communication threshold">
+            </div>
+          </div>
+          <div class="btn-group" style="margin-top: 0.5rem;">
+            <button class="btn btn-primary" onclick="reanalyse()" type="button">Re-analyse with New Thresholds</button>
+            <button class="btn btn-ghost" onclick="resetNetworkThresholds()" type="button">Reset Defaults</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- LEARN TAB -->
+      <div class="tool-section" id="tab-learn" role="tabpanel">
+        <div class="edu-section">
+          <h2>How to Think Like a Network Analyst</h2>
+          <p style="margin-bottom: 1rem;">These steps describe how a SOC analyst approaches unusual network traffic. Use them as a guide when reviewing the findings above.</p>
+          <ol class="edu-steps">
+            <li><strong>Observe the unusual behaviour.</strong> What pattern caught your attention? High packet count? An unfamiliar destination? Unusual protocol activity?</li>
+            <li><strong>Identify the source and destination.</strong> Which host generated the traffic? Where was it going? Is the destination internal or external?</li>
+            <li><strong>Determine which protocol is involved.</strong> TCP, UDP, ICMP, DNS, and ARP all behave differently. Understanding the protocol helps you assess whether the traffic is expected.</li>
+            <li><strong>Establish whether the activity is expected.</strong> Is this the kind of traffic you would normally see from this host? Does the volume make sense? Is the timing unusual?</li>
+            <li><strong>Look for supporting indicators.</strong> Does the same host appear in multiple findings? Are there other hosts showing similar patterns?</li>
+            <li><strong>Correlate with other security telemetry.</strong> Network traffic alone rarely tells the whole story. Check endpoint logs, authentication events, and any available alerts from other systems.</li>
+            <li><strong>Decide whether further investigation is required.</strong> Not every anomaly is an incident. Make a reasoned judgement based on the available evidence, context, and possible benign explanations.</li>
+          </ol>
+          <div class="key-message">&ldquo;An anomaly is a starting point for investigation, not proof of compromise. Always consider the most likely explanation first.&rdquo;</div>
+        </div>
+
+        <div class="edu-section">
+          <h2>How to Export a Wireshark CSV</h2>
+          <ol class="edu-steps">
+            <li>Open Wireshark and capture traffic on an authorised network interface.</li>
+            <li>Stop the capture when you have enough data.</li>
+            <li>Go to <strong>File &rarr; Export Packet Dissections &rarr; As CSV&hellip;</strong></li>
+            <li>In the export dialog, choose <strong>All packets</strong> and select the columns you want (No., Time, Source, Destination, Protocol, Length, Info).</li>
+            <li>Save the file with a <code>.csv</code> extension.</li>
+            <li>Upload the file into this tool using the upload area above.</li>
+          </ol>
+          <div class="warning-box"><p><strong>Important:</strong> Only capture traffic on networks and systems you own or have explicit written authorisation to monitor. Capturing network traffic without authorisation may be illegal.</p></div>
+        </div>
+
+        <div class="edu-section">
+          <h2>Detection Rules Used in This Tool</h2>
+          <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+            <div class="eventid-card">
+              <div class="eid-num">Rule 1 &mdash; High Packet Volume</div>
+              <div class="eid-name">One source generates more packets than the configured threshold</div>
+              <div class="eid-desc">May indicate legitimate high-volume activity, file transfers, scans, or automated tools.</div>
+            </div>
+            <div class="eventid-card">
+              <div class="eid-num">Rule 2 &mdash; Possible Host Scanning</div>
+              <div class="eid-name">One source contacts an unusually large number of unique destinations</div>
+              <div class="eid-desc">May indicate host discovery, network scanning, or distributed application behaviour.</div>
+            </div>
+            <div class="eventid-card">
+              <div class="eid-num">Rule 3 &mdash; Possible Port Scanning</div>
+              <div class="eid-name">One source contacts many different ports on the same destination</div>
+              <div class="eid-desc">Detects where the Info field reliably exposes port numbers. May indicate port scanning or service discovery.</div>
+            </div>
+            <div class="eventid-card">
+              <div class="eid-num">Rule 4 &mdash; High ICMP Activity</div>
+              <div class="eid-name">One source generates an elevated number of ICMP packets</div>
+              <div class="eid-desc">May indicate ping sweeps, network troubleshooting, monitoring tools, or denial-of-service activity.</div>
+            </div>
+            <div class="eventid-card">
+              <div class="eid-num">Rule 5 &mdash; High DNS Query Activity</div>
+              <div class="eid-name">One source generates an elevated number of DNS queries</div>
+              <div class="eid-desc">May indicate normal browsing, automated tools, misconfiguration, or beaconing behaviour.</div>
+            </div>
+            <div class="eventid-card">
+              <div class="eid-num">Rule 6 &mdash; Repeated Source-to-Destination Communication</div>
+              <div class="eid-name">One source sends a high number of packets to the same destination</div>
+              <div class="eid-desc">May indicate normal application traffic, persistent connections, or unusual automated activity.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <!-- end #results -->
+
+  </div>
+</main>
+
+<footer class="site-footer" role="contentinfo">
+  <p>SOC Triage Toolkit &mdash; Network Traffic Triage Tool &mdash; Educational use only &mdash; All analysis is local &mdash; <a href="index.html">Home</a></p>
+</footer>
+
+<script src="network.js"></script>
+</body>
+</html>

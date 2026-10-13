@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SOC Triage Toolkit</title>
+  <meta name="description" content="Browser-based SOC triage tools for network traffic and Windows security event log analysis. All analysis is local — no data is uploaded.">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="site-header" role="banner">
+  <div class="inner">
+    <a href="index.html" class="logo" aria-label="SOC Triage Toolkit home">
+      <span class="icon" aria-hidden="true">🛡️</span>
+      SOC Triage Toolkit
+    </a>
+    <nav aria-label="Main navigation">
+      <a href="index.html" class="active" aria-current="page">Home</a>
+      <a href="network.html">Network</a>
+      <a href="windows.html">Windows</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="page-wrapper">
+
+    <section class="page-hero" aria-labelledby="hero-heading">
+      <span class="badge">Educational Toolkit • v1.0</span>
+      <h1 id="hero-heading">SOC Triage Toolkit</h1>
+      <p>A browser-based toolkit for learning how Security Operations Centre analysts investigate network traffic patterns and Windows security events. All analysis happens locally &mdash; your files are never uploaded or transmitted anywhere.</p>
+    </section>
+
+    <!-- Privacy notice -->
+    <div class="privacy-box" role="note" aria-label="Privacy statement">
+      <span aria-hidden="true">🔒</span>
+      <p><strong>Privacy by design:</strong> All analysis happens entirely inside your browser. Uploaded CSV files are never sent to a server, API, or any external service. No tracking, no cookies, no analytics.</p>
+    </div>
+
+    <!-- Disclaimer -->
+    <div class="disclaimer-box" role="note" aria-label="Disclaimer">
+      <p><strong>Educational use only.</strong> Alerts indicate activity worth investigating and do not prove malicious behaviour. Only analyse traffic and logs from systems and networks you own or are authorised to monitor.</p>
+    </div>
+
+    <!-- Central lesson -->
+    <div class="card" style="border-left: 4px solid var(--accent-hover); margin-top: 1.5rem;">
+      <h2 style="margin-bottom: 0.5rem;">The Central Lesson</h2>
+      <p style="font-size: 1rem; color: var(--text-primary); font-style: italic; margin-bottom: 0.5rem;">&ldquo;Detection tells an analyst where to look. Investigation determines what actually happened.&rdquo;</p>
+      <p>An anomaly is a starting point for investigation, not proof of compromise. Both tools in this toolkit are designed to teach you how to think like a SOC analyst &mdash; systematically, with curiosity and healthy scepticism.</p>
+    </div>
+
+    <!-- Tool selection cards -->
+    <h2 style="margin-bottom: 0.25rem; margin-top: 2rem;">Choose a Tool</h2>
+    <p style="margin-bottom: 0;">Select the tool that matches the data you want to investigate.</p>
+
+    <div class="tool-cards" role="list">
+
+      <a href="network.html" class="tool-card" role="listitem" aria-label="Open Network Traffic Triage Tool">
+        <div class="tool-icon net" aria-hidden="true">📡</div>
+        <div>
+          <h2>Network Traffic Triage Tool</h2>
+          <p class="tool-desc">Upload a Wireshark CSV export to analyse packet patterns, identify high-volume sources, detect possible scanning behaviour, and understand protocol distribution &mdash; all explained in plain English.</p>
+        </div>
+        <div class="tool-cta">Open Network Tool &rarr;</div>
+      </a>
+
+      <a href="windows.html" class="tool-card" role="listitem" aria-label="Open Windows Security Event Log Triage Tool">
+        <div class="tool-icon win" aria-hidden="true">🔍</div>
+        <div>
+          <h2>Windows Security Event Log Triage Tool</h2>
+          <p class="tool-desc">Upload a Windows Event Viewer CSV export to identify important security events, correlate authentication patterns, detect account changes, and understand what each Event ID means for an investigation.</p>
+        </div>
+        <div class="tool-cta">Open Windows Tool &rarr;</div>
+      </a>
+
+    </div>
+
+    <!-- What this toolkit teaches -->
+    <div class="card">
+      <div class="card-header">
+        <h2>What This Toolkit Teaches</h2>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.25rem;">
+        <div>
+          <h3 style="margin-bottom: 0.5rem; color: var(--accent-hover);">Network Analysis</h3>
+          <ul style="padding-left: 1.25rem; color: var(--text-secondary); font-size: 0.9rem;">
+            <li>How to read Wireshark packet data</li>
+            <li>Why high traffic volume deserves investigation</li>
+            <li>How scanning patterns appear in traffic logs</li>
+            <li>How to distinguish protocols and their roles</li>
+            <li>Why anomalies are not automatic proof of attack</li>
+          </ul>
+        </div>
+        <div>
+          <h3 style="margin-bottom: 0.5rem; color: var(--accent-hover);">Windows Event Logs</h3>
+          <ul style="padding-left: 1.25rem; color: var(--text-secondary); font-size: 0.9rem;">
+            <li>What key Windows Event IDs mean</li>
+            <li>How to recognise suspicious authentication patterns</li>
+            <li>Why event correlation matters in SOC work</li>
+            <li>How privilege escalation sequences look in logs</li>
+            <li>Why a single event rarely tells the whole story</li>
+          </ul>
+        </div>
+        <div>
+          <h3 style="margin-bottom: 0.5rem; color: var(--accent-hover);">Analyst Mindset</h3>
+          <ul style="padding-left: 1.25rem; color: var(--text-secondary); font-size: 0.9rem;">
+            <li>How to assess investigative priority</li>
+            <li>How to consider benign explanations</li>
+            <li>What &ldquo;suggested next steps&rdquo; look like in practice</li>
+            <li>Why thresholds are contextual, not universal</li>
+            <li>How false positives occur and why they matter</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- How to use -->
+    <div class="edu-section">
+      <h2>How to Use This Toolkit</h2>
+      <ol class="edu-steps">
+        <li>Choose the tool that matches your data &mdash; Network for Wireshark exports, Windows for Event Viewer exports.</li>
+        <li>Use the <strong>Load Sample</strong> buttons to explore pre-built scenarios without needing real data.</li>
+        <li>Upload your own CSV file using the upload area or by dragging and dropping the file.</li>
+        <li>Review the dashboard summary to understand what was captured.</li>
+        <li>Read through the findings. Click each alert to expand the full explanation.</li>
+        <li>Use the filters to focus on specific sources, protocols, accounts, or severity levels.</li>
+        <li>Adjust detection thresholds if the defaults do not match your environment.</li>
+        <li>Read the &ldquo;How to Think Like an Analyst&rdquo; section in each tool for guidance on investigation.</li>
+      </ol>
+      <div class="key-message">&ldquo;An anomaly is a starting point for investigation, not proof of compromise. Always consider benign explanations before escalating.&rdquo;</div>
+    </div>
+
+  </div>
+</main>
+
+<footer class="site-footer" role="contentinfo">
+  <p>SOC Triage Toolkit &mdash; Educational use only &mdash; All analysis is local &mdash; No data is uploaded or transmitted &mdash; <a href="README.md">Documentation</a></p>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,10 @@
+Event ID,Level,Date and Time,Source,Task Category,User,Computer,Message
+4624,Information,2024-06-10 08:01:00,Microsoft-Windows-Security-Auditing,,alice,WORKSTATION-01,"An account was successfully logged on. Logon Type: 2"
+4624,Information,2024-06-10 08:02:00,Microsoft-Windows-Security-Auditing,,bob,WORKSTATION-02,"An account was successfully logged on. Logon Type: 2"
+4624,Information,2024-06-10 08:03:00,Microsoft-Windows-Security-Auditing,,carol,SERVER-01,"An account was successfully logged on. Logon Type: 2"
+4624,Information,2024-06-10 08:04:00,Microsoft-Windows-Security-Auditing,,alice,WORKSTATION-01,"An account was successfully logged on. Logon Type: 2"
+4624,Information,2024-06-10 08:05:00,Microsoft-Windows-Security-Auditing,,bob,WORKSTATION-02,"An account was successfully logged on. Logon Type: 2"
+4688,Information,2024-06-10 08:06:00,Microsoft-Windows-Security-Auditing,,alice,WORKSTATION-01,"A new process has been created. Process Name: notepad.exe"
+4688,Information,2024-06-10 08:07:00,Microsoft-Windows-Security-Auditing,,bob,WORKSTATION-02,"A new process has been created. Process Name: chrome.exe"
+4625,Information,2024-06-10 08:08:00,Microsoft-Windows-Security-Auditing,,alice,WORKSTATION-01,"An account failed to log on. Failure Reason: Wrong password"
+4624,Information,2024-06-10 08:09:00,Microsoft-Windows-Security-Auditing,,alice,WORKSTATION-01,"An account was successfully logged on."

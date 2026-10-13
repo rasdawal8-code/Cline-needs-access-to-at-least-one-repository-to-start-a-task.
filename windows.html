@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Windows Event Log Triage Tool — SOC Triage Toolkit</title>
+  <meta name="description" content="Analyse Windows Event Viewer CSV exports locally. Detect failed logins, account changes, privilege escalation, and audit log clearing.">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="site-header" role="banner">
+  <div class="inner">
+    <a href="index.html" class="logo" aria-label="SOC Triage Toolkit home">
+      <span class="icon" aria-hidden="true">🛡️</span>
+      SOC Triage Toolkit
+    </a>
+    <nav aria-label="Main navigation">
+      <a href="index.html">Home</a>
+      <a href="network.html">Network</a>
+      <a href="windows.html" class="active" aria-current="page">Windows</a>
+    </nav>
+  </div>
+</header>
+<main>
+  <div class="page-wrapper">
+    <section class="page-hero" aria-labelledby="tool-heading">
+      <span class="badge">🔍 Windows Security Event Log Triage Tool</span>
+      <h1 id="tool-heading">Windows Event Log Triage</h1>
+      <p>Upload a Windows Event Viewer CSV export to identify important security events, correlate authentication patterns, and understand what the activity means for an investigation. All analysis happens locally in your browser.</p>
+    </section>
+    <div class="privacy-box" role="note" aria-label="Privacy statement">
+      <span aria-hidden="true">🔒</span>
+      <p>Your Windows security logs are analysed locally in your browser. Files are <strong>not uploaded or transmitted anywhere</strong>. No data leaves your device.</p>
+    </div>
+    <div class="disclaimer-box" role="note" aria-label="Disclaimer">
+      <p><strong>Educational tool.</strong> Alerts indicate activity worth investigating and do not prove malicious behaviour. Only analyse logs from systems you own or are authorised to monitor.</p>
+    </div>
+    <div class="card" id="upload-card">
+      <div class="card-header"><h2>Upload Windows Event Viewer CSV</h2></div>
+      <div class="upload-zone" id="upload-zone" role="button" tabindex="0" aria-label="Upload Windows Event Viewer CSV file">
+        <span class="upload-icon" aria-hidden="true">📋</span>
+        <h3>Drag &amp; drop your Windows Event CSV here</h3>
+        <p>or click to browse &mdash; Event Viewer → Save All Events As → CSV (or use PowerShell export)</p>
+        <button class="btn btn-primary" type="button" onclick="document.getElementById('win-file-input').click()" aria-label="Choose CSV file">Choose CSV File</button>
+        <input type="file" id="win-file-input" accept=".csv,text/csv" aria-label="CSV file input">
+      </div>
+      <div class="file-info" id="win-file-info" role="status" aria-live="polite"></div>
+      <div class="error-box hidden" id="win-parse-error" role="alert"><p id="win-parse-error-text"></p></div>
+      <div class="card" style="margin-bottom:0;background:var(--bg-surface);">
+        <h3 style="margin-bottom:0.75rem;">Or load a sample dataset</h3>
+        <div class="btn-group">
+          <button class="btn btn-secondary" onclick="loadWinSample('normal-windows-events')" type="button">🟢 Load Normal Activity</button>
+          <button class="btn btn-secondary" onclick="loadWinSample('password-guessing')" type="button">🟡 Load Password Guessing</button>
+          <button class="btn btn-secondary" onclick="loadWinSample('account-persistence')" type="button">🟠 Load Privilege Escalation</button>
+          <button class="btn btn-secondary" onclick="loadWinSample('suspicious-admin-activity')" type="button">🔴 Load Mixed SOC Sample</button>
+        </div>
+        <p style="margin-top:0.75rem;font-size:0.82rem;">Sample datasets use fictional usernames and IP addresses and are safe for learning and demonstration.</p>
+      </div>
+    </div>
+    <div class="demo-banner" id="win-demo-banner" role="status">
+      <span aria-hidden="true">⚠️</span>
+      DEMO DATA — This is a pre-built sample dataset for learning and demonstration purposes.
+    </div>
+    <div id="win-results" class="hidden" aria-live="polite">
+      <div class="section-tabs" role="tablist" aria-label="Analysis sections">
+        <button class="section-tab active" role="tab" aria-selected="true"  aria-controls="wtab-overview"  onclick="showWinTab('overview', this)">Overview</button>
+        <button class="section-tab"         role="tab" aria-selected="false" aria-controls="wtab-findings"  onclick="showWinTab('findings', this)">Findings &amp; Alerts</button>
+        <button class="section-tab"         role="tab" aria-selected="false" aria-controls="wtab-accounts"  onclick="showWinTab('accounts', this)">Accounts</button>
+        <button class="section-tab"         role="tab" aria-selected="false" aria-controls="wtab-settings"  onclick="showWinTab('settings', this)">Thresholds</button>
+        <button class="section-tab"         role="tab" aria-selected="false" aria-controls="wtab-reference" onclick="showWinTab('reference', this)">Event ID Reference</button>
+        <button class="section-tab"         role="tab" aria-selected="false" aria-controls="wtab-learn"     onclick="showWinTab('learn', this)">How to Analyse</button>
+      </div>
+      <!-- OVERVIEW -->
+      <div class="tool-section active" id="wtab-overview" role="tabpanel">
+        <div class="stat-grid" id="win-stat-grid" aria-label="Event summary statistics"></div>
+        <div class="card">
+          <div class="card-header"><h2>Most Common Event IDs</h2></div>
+          <div class="bar-list" id="win-eventid-bars" aria-label="Event ID distribution"></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h2>Administrative &amp; Privilege Activity Summary</h2></div>
+          <div id="win-admin-summary"><p>No administrative activity detected.</p></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h2>Event Timeline</h2></div>
+          <ul class="timeline" id="win-timeline" aria-label="Security event timeline"></ul>
+          <p class="text-muted" id="win-timeline-note" style="margin-top:0.5rem;"></p>
+        </div>
+      </div>
+      <!-- FINDINGS -->
+      <div class="tool-section" id="wtab-findings" role="tabpanel">
+        <div class="filter-row" role="search" aria-label="Filter alerts">
+          <div class="form-group">
+            <label class="form-label" for="win-filter-eid">Event ID</label>
+            <input type="search" id="win-filter-eid" placeholder="e.g. 4625" aria-label="Filter by Event ID">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="win-filter-acct">Account</label>
+            <input type="search" id="win-filter-acct" placeholder="e.g. jsmith" aria-label="Filter by account">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="win-filter-sev">Severity</label>
+            <select id="win-filter-sev" aria-label="Filter by severity">
+              <option value="">All Severities</option>
+              <option value="informational">Informational</option>
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </select>
+          </div>
+          <div class="form-group" style="flex:0;">
+            <label class="form-label">&nbsp;</label>
+            <button class="btn btn-ghost" onclick="clearWinFilters()" type="button">Clear Filters</button>
+          </div>
+        </div>
+        <div id="win-alert-count" style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.75rem;"></div>
+        <div class="alert-list" id="win-alert-list" aria-label="Security findings"></div>
+        <div class="no-results hidden" id="win-no-findings"><div class="nr-icon" aria-hidden="true">✅</div><p>No findings match the current filters.</p></div>
+      </div>
+      <!-- ACCOUNTS -->
+      <div class="tool-section" id="wtab-accounts" role="tabpanel">
+        <div class="card">
+          <div class="card-header"><h2>Top Accounts by Event Count</h2></div>
+          <div class="data-table-wrap">
+            <table class="data-table" id="win-acct-table" aria-label="Account event summary">
+              <thead><tr><th>#</th><th>Account</th><th>Total Events</th><th>Successful Logons</th><th>Failed Logons</th><th>Other Events</th></tr></thead>
+              <tbody id="win-acct-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h2>Failed Logon Summary</h2></div>
+          <div class="data-table-wrap">
+            <table class="data-table" id="win-fail-table" aria-label="Failed logon summary">
+              <thead><tr><th>#</th><th>Account</th><th>Failed Logons</th><th>Successful Logon After?</th></tr></thead>
+              <tbody id="win-fail-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <!-- THRESHOLDS -->
+      <div class="tool-section" id="wtab-settings" role="tabpanel">
+        <div class="card">
+          <div class="card-header"><h2>Detection Thresholds</h2></div>
+          <div class="warning-box"><p>These are educational defaults, not universal SOC thresholds. Adjust them to match your environment and the expected behaviour of users and systems.</p></div>
+          <div class="threshold-grid">
+            <div class="form-group">
+              <label class="form-label" for="win-thr-fails">Repeated failed logons (failures for same account)</label>
+              <input type="number" id="win-thr-fails" value="5" min="1" aria-label="Failed logon threshold">
+            </div>
+          </div>
+          <div class="btn-group" style="margin-top:0.5rem;">
+            <button class="btn btn-primary" onclick="reanalyseWindows()" type="button">Re-analyse with New Thresholds</button>
+            <button class="btn btn-ghost" onclick="resetWinThresholds()" type="button">Reset Defaults</button>
+          </div>
+        </div>
+      </div>
+      <!-- EVENT ID REFERENCE -->
+      <div class="tool-section" id="wtab-reference" role="tabpanel">
+        <div class="edu-section">
+          <h2>Windows Security Event ID Reference</h2>
+          <p style="margin-bottom:1rem;">These are the Event IDs this tool recognises. Understanding what each one means is the foundation of Windows security event analysis.</p>
+          <div class="eventid-grid">
+            <div class="eventid-card"><div class="eid-num">4624</div><div class="eid-name">Successful Logon</div><div class="eid-desc">A user successfully authenticated to the system. This is normal activity but important context when correlated with failed logons or unusual hours.</div></div>
+            <div class="eventid-card"><div class="eid-num">4625</div><div class="eid-name">Failed Logon</div><div class="eid-desc">An authentication attempt failed. A single failure is usually benign. Multiple failures for the same account may indicate a wrong password, a stale service credential, or a brute-force attempt.</div></div>
+            <div class="eventid-card"><div class="eid-num">4720</div><div class="eid-name">User Account Created</div><div class="eid-desc">A new Windows user account was created. May be legitimate administration or an attacker establishing persistence.</div></div>
+            <div class="eventid-card"><div class="eid-num">4726</div><div class="eid-name">User Account Deleted</div><div class="eid-desc">A user account was deleted. Could be routine offboarding or suspicious account manipulation.</div></div>
+            <div class="eventid-card"><div class="eid-num">4728</div><div class="eid-name">Member Added to Global Security Group</div><div class="eid-desc">A user was added to a global security group. If the group is privileged (e.g. Domain Admins), this warrants careful review.</div></div>
+            <div class="eventid-card"><div class="eid-num">4732</div><div class="eid-name">Member Added to Local Security Group</div><div class="eid-desc">A user was added to a local security group. If the group is Administrators or similar, this deserves investigation.</div></div>
+            <div class="eventid-card"><div class="eid-num">4688</div><div class="eid-name">Process Created</div><div class="eid-desc">A new process was started. With process creation auditing enabled, this can reveal commands executed on the system.</div></div>
+            <div class="eventid-card"><div class="eid-num">4104</div><div class="eid-name">PowerShell Script Block Logged</div><div class="eid-desc">A PowerShell script or command was executed. Provides valuable visibility into scripts run on the endpoint. Obfuscated commands deserve additional scrutiny.</div></div>
+            <div class="eventid-card"><div class="eid-num">7045</div><div class="eid-name">Service Installed</div><div class="eid-desc">A new Windows service was installed. May be legitimate software installation or potentially attacker-established persistence.</div></div>
+            <div class="eventid-card"><div class="eid-num">1102</div><div class="eid-name">Security Audit Log Cleared</div><div class="eid-desc">The Windows Security event log was cleared. Can be legitimate maintenance but is also associated with attackers removing evidence. Should normally be investigated.</div></div>
+          </div>
+        </div>
+      </div>
+      <!-- LEARN -->
+      <div class="tool-section" id="wtab-learn" role="tabpanel">
+        <div class="edu-section">
+          <h2>How to Think Like a SOC Analyst</h2>
+          <p style="margin-bottom:1rem;">These steps describe how a SOC analyst approaches Windows security events. One event rarely tells the complete story — context and correlation are everything.</p>
+          <ol class="edu-steps">
+            <li><strong>Identify the event.</strong> Which Event ID triggered? What does it mean? Use the Event ID Reference tab as a guide.</li>
+            <li><strong>Understand what happened.</strong> A logon attempt? An account change? A privilege grant? Be precise about what the event actually records.</li>
+            <li><strong>Identify the affected user or system.</strong> Which account is involved? Which computer generated the event? Is this a user account, a service account, or a machine account?</li>
+            <li><strong>Determine whether the activity is expected.</strong> Is this user normally active at this time? Is this the computer they usually log into? Is this a known administrative action?</li>
+            <li><strong>Look for related events.</strong> Did failed logons precede a successful one? Was an account created and then immediately granted privileges? Were logs cleared after suspicious activity?</li>
+            <li><strong>Correlate authentication and privilege activity.</strong> Authentication events, privilege changes, and process creation events together tell a richer story than any single event alone.</li>
+            <li><strong>Gather additional evidence.</strong> Check endpoint telemetry, network logs, and any available MFA or VPN records to build context.</li>
+            <li><strong>Decide whether escalation is required.</strong> Make a reasoned judgement. Consider benign explanations. Document your reasoning.</li>
+          </ol>
+          <div class="key-message">&ldquo;One security event rarely tells the entire story. Analysts build context by correlating multiple events across time.&rdquo;</div>
+          <div class="key-message" style="margin-top:0.75rem;">&ldquo;A detection is a reason to investigate, not proof that an attacker is present.&rdquo;</div>
+        </div>
+        <div class="edu-section">
+          <h2>How to Export Windows Security Events as CSV</h2>
+          <ol class="edu-steps">
+            <li>Open <strong>Windows Event Viewer</strong> (search for it in the Start menu).</li>
+            <li>In the left panel, navigate to <strong>Windows Logs → Security</strong>.</li>
+            <li>Optionally, click <strong>Filter Current Log</strong> in the right panel to filter by specific Event IDs or time range.</li>
+            <li>To export, go to <strong>Action → Save All Events As…</strong> and choose <strong>CSV (Comma Separated)</strong> as the file type.</li>
+            <li>Alternatively, use PowerShell: <code>Get-WinEvent -LogName Security | Export-Csv -Path security-events.csv -NoTypeInformation</code></li>
+            <li>Upload the resulting CSV file into this tool.</li>
+          </ol>
+          <div class="warning-box"><p><strong>Note:</strong> Windows Event Viewer CSV exports may not include all fields depending on how they are exported. PowerShell exports tend to be more complete. If certain columns are missing, the tool will notify you and work with whatever data is available.</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+<footer class="site-footer" role="contentinfo">
+  <p>SOC Triage Toolkit &mdash; Windows Event Log Triage Tool &mdash; Educational use only &mdash; All analysis is local &mdash; <a href="index.html">Home</a></p>
+</footer>
+<script src="windows.js"></script>
+</body>
+</html>
