@@ -1,0 +1,29 @@
+# Secrets and keys — never commit
+.env
+
+# Database files — contain live data and encryption keys
+data/
+*.db
+*.db-shm
+*.db-wal
+
+# Node modules
+node_modules/
+
+# Build output (optional — comment out if you want dist included)
+# frontend/dist/
+
+# Logs
+*.log
+nohup.out
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Temp files
+write_files.py

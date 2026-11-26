@@ -1,0 +1,54 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * { box-sizing: border-box; }
+  body {
+    background-color: #0a0a0f;
+    color: #e2e8f0;
+    font-family: 'Inter', system-ui, sans-serif;
+    min-height: 100vh;
+  }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: #12121a; }
+  ::-webkit-scrollbar-thumb { background: #1e1e2e; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #2e2e4e; }
+}
+
+@layer components {
+  .gotu-card {
+    @apply bg-gotu-surface border border-gotu-border rounded-lg p-4;
+  }
+  .gotu-btn {
+    @apply px-4 py-2 rounded-md font-medium text-sm transition-all duration-150 cursor-pointer;
+  }
+  .gotu-btn-primary {
+    @apply gotu-btn bg-gotu-accent text-gotu-bg hover:bg-opacity-90 active:scale-95;
+  }
+  .gotu-btn-secondary {
+    @apply gotu-btn border border-gotu-border text-gotu-text hover:border-gotu-accent hover:text-gotu-accent;
+  }
+  .gotu-btn-danger {
+    @apply gotu-btn bg-gotu-danger text-white hover:bg-opacity-90;
+  }
+  .gotu-input {
+    @apply w-full bg-gotu-bg border border-gotu-border rounded-md px-3 py-2 text-gotu-text text-sm
+           placeholder-gotu-muted focus:outline-none focus:border-gotu-accent transition-colors;
+  }
+  .gotu-label {
+    @apply block text-xs font-medium text-gotu-muted uppercase tracking-wider mb-1;
+  }
+  .gotu-badge {
+    @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium;
+  }
+  .gotu-badge-green  { @apply gotu-badge bg-gotu-success bg-opacity-20 text-gotu-success; }
+  .gotu-badge-cyan   { @apply gotu-badge bg-gotu-accent bg-opacity-20 text-gotu-accent; }
+  .gotu-badge-yellow { @apply gotu-badge bg-gotu-warning bg-opacity-20 text-gotu-warning; }
+  .gotu-badge-red    { @apply gotu-badge bg-gotu-danger bg-opacity-20 text-gotu-danger; }
+  .gotu-badge-gray   { @apply gotu-badge bg-gotu-muted bg-opacity-20 text-gotu-muted; }
+  .status-confirmed   { @apply gotu-badge-green; }
+  .status-probable    { @apply gotu-badge-cyan; }
+  .status-possible    { @apply gotu-badge-yellow; }
+  .status-unverified  { @apply gotu-badge-gray; }
+}
